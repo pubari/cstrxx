@@ -3,6 +3,7 @@
 
 #include <ctime>
 #include <cstring>
+#include <stdexcept>
 #include <charconv>
 
 constexpr const size_t FBUF_SIZE = 64;
@@ -45,8 +46,7 @@ inline size_t cstrxx_strset(char* buf, size_t pos, const char* str, size_t str_s
 
 inline size_t cstrxx_strset(char* buf, size_t pos, const char* str)
 {
-    size_t str_size = strlen(str);
-    return cstrxx_strset(buf, pos, str, str_size);
+    return cstrxx_strset(buf, pos, str, strlen(str));
 }
 
 inline size_t cstrxx_strrset(char* buf, size_t pos, const char* str, size_t str_size, size_t nsize, char c)
@@ -63,8 +63,7 @@ inline size_t cstrxx_strrset(char* buf, size_t pos, const char* str, size_t str_
 
 inline size_t cstrxx_strrset(char* buf, size_t pos, const char* str, size_t nsize, char c)
 {
-    size_t str_size = strlen(str);
-    return cstrxx_strrset(buf, pos, str, str_size, nsize, c);
+    return cstrxx_strrset(buf, pos, str, strlen(str), nsize, c);
 }
 
 inline size_t cstrxx_strrset(char* buf, size_t pos, const char* str, size_t str_size, size_t nsize)
@@ -74,8 +73,7 @@ inline size_t cstrxx_strrset(char* buf, size_t pos, const char* str, size_t str_
 
 inline size_t cstrxx_strrset(char* buf, size_t pos, const char* str, size_t nsize)
 {
-    size_t str_size = strlen(str);
-    return cstrxx_strrset(buf, pos, str, str_size, nsize, ' ');
+    return cstrxx_strrset(buf, pos, str, strlen(str), nsize, ' ');
 }
 
 inline size_t cstrxx_strlset(char* buf, size_t pos, const char* str, size_t str_size, size_t nsize, char c)
@@ -92,8 +90,7 @@ inline size_t cstrxx_strlset(char* buf, size_t pos, const char* str, size_t str_
 
 inline size_t cstrxx_strlset(char* buf, size_t pos, const char* str, size_t nsize, char c)
 {
-    size_t str_size = strlen(str);
-    return cstrxx_strlset(buf, pos, str, str_size, nsize, c);
+    return cstrxx_strlset(buf, pos, str, strlen(str), nsize, c);
 }
 
 inline size_t cstrxx_strlset(char* buf, size_t pos, const char* str, size_t str_size, size_t nsize)
@@ -103,8 +100,7 @@ inline size_t cstrxx_strlset(char* buf, size_t pos, const char* str, size_t str_
 
 inline size_t cstrxx_strlset(char* buf, size_t pos, const char* str, size_t nsize)
 {
-    size_t str_size = strlen(str);
-    return cstrxx_strlset(buf, pos, str, str_size, nsize, ' ');
+    return cstrxx_strlset(buf, pos, str, strlen(str), nsize, ' ');
 }
 
 // NUMBER SIGN INSERTIONS
@@ -258,6 +254,40 @@ inline size_t cstrxx_dtset(char* buf, size_t pos, time_t epoch)
     dt_size += cstrxx_charset(buf, pos + dt_size, ':');
     dt_size += cstrxx_intrset(buf, pos + dt_size, ts.tm_sec, 2, '0');
     return dt_size;
+}
+
+// FROM STRING CONVERTIONS
+
+inline double cstrxx_floatget(const char* str, size_t str_size)
+{
+    double fvalue;
+    std::from_chars_result fcr = std::from_chars(str, str + str_size, fvalue);
+    if (fcr.ec == std::errc{})
+    {
+        return fvalue;
+    }
+    throw std::invalid_argument("could not convert str to float");
+}
+
+inline double cstrxx_floatget(const char* str)
+{
+    return cstrxx_floatget(str, strlen(str));
+}
+
+inline int cstrxx_intget(const char* str, size_t str_size)
+{
+    int ivalue;
+    std::from_chars_result fcr = std::from_chars(str, str + str_size, ivalue);
+    if (fcr.ec == std::errc{})
+    {
+        return ivalue;
+    }
+    throw std::invalid_argument("could not convert str to int");
+}
+
+inline int cstrxx_intget(const char* str)
+{
+    return cstrxx_intget(str, strlen(str));
 }
 
 #endif // CSTRXX_H
