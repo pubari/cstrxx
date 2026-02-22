@@ -49,9 +49,8 @@ inline size_t cstrxx_strset(char* buf, size_t pos, const char* str)
     return cstrxx_strset(buf, pos, str, str_size);
 }
 
-inline size_t cstrxx_strrset(char* buf, size_t pos, const char* str, size_t nsize, char c)
+inline size_t cstrxx_strrset(char* buf, size_t pos, const char* str, size_t str_size, size_t nsize, char c)
 {
-    size_t str_size = strlen(str);
     if (str_size < 1)
     {
         cstrxx_charspan(buf, pos, c, nsize);
@@ -62,14 +61,25 @@ inline size_t cstrxx_strrset(char* buf, size_t pos, const char* str, size_t nsiz
     return nsize;
 }
 
-inline size_t cstrxx_strrset(char* buf, size_t pos, const char* str, size_t nsize)
-{
-    return cstrxx_strrset(buf, pos, str, nsize, ' ');
-}
-
-inline size_t cstrxx_strlset(char* buf, size_t pos, const char* str, size_t nsize, char c)
+inline size_t cstrxx_strrset(char* buf, size_t pos, const char* str, size_t nsize, char c)
 {
     size_t str_size = strlen(str);
+    return cstrxx_strrset(buf, pos, str, str_size, nsize, c);
+}
+
+inline size_t cstrxx_strrset(char* buf, size_t pos, const char* str, size_t str_size, size_t nsize)
+{
+    return cstrxx_strrset(buf, pos, str, str_size, nsize, ' ');
+}
+
+inline size_t cstrxx_strrset(char* buf, size_t pos, const char* str, size_t nsize)
+{
+    size_t str_size = strlen(str);
+    return cstrxx_strrset(buf, pos, str, str_size, nsize, ' ');
+}
+
+inline size_t cstrxx_strlset(char* buf, size_t pos, const char* str, size_t str_size, size_t nsize, char c)
+{
     if (str_size < 1)
     {
         cstrxx_charspan(buf, pos, c, nsize);
@@ -80,9 +90,21 @@ inline size_t cstrxx_strlset(char* buf, size_t pos, const char* str, size_t nsiz
     return nsize;
 }
 
+inline size_t cstrxx_strlset(char* buf, size_t pos, const char* str, size_t nsize, char c)
+{
+    size_t str_size = strlen(str);
+    return cstrxx_strlset(buf, pos, str, str_size, nsize, c);
+}
+
+inline size_t cstrxx_strlset(char* buf, size_t pos, const char* str, size_t str_size, size_t nsize)
+{
+    return cstrxx_strlset(buf, pos, str, str_size, nsize, ' ');
+}
+
 inline size_t cstrxx_strlset(char* buf, size_t pos, const char* str, size_t nsize)
 {
-    return cstrxx_strlset(buf, pos, str, nsize, ' ');
+    size_t str_size = strlen(str);
+    return cstrxx_strlset(buf, pos, str, str_size, nsize, ' ');
 }
 
 // NUMBER SIGN INSERTIONS
@@ -164,58 +186,57 @@ inline size_t cstrxx_floatfset(char* buf, size_t pos, double num)
     return cstrxx_floatfset(buf, pos, num, -1);
 }
 
-inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, int ffixed, char c, int nsize)
+inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, int ffixed, int nsize, char c)
 {
     char fbuf[FBUF_SIZE];
     size_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, num, ffixed);
     size_t pad_size = nsize - fbuf_size;
-    return cstrxx_charspan(buf, pos, c, pad_size) + cstrxx_strset(buf, pos + pad_size, fbuf, fbuf_size);
+    return cstrxx_strrset(buf, pos, fbuf, fbuf_size, nsize, c);
 }
 
-inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, char c, int nsize)
+inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, int nsize, char c)
 {
-    return cstrxx_floatfrset(buf, pos, num, -1, c, nsize);
+    return cstrxx_floatfrset(buf, pos, num, -1, nsize, c);
 }
 
 inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, int ffixed, int nsize)
 {
-    return cstrxx_floatfrset(buf, pos, num, ffixed, ' ', nsize);
+    return cstrxx_floatfrset(buf, pos, num, ffixed, nsize, ' ');
 }
 
 inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, int nsize)
 {
-    return cstrxx_floatfrset(buf, pos, num, -1, ' ', nsize);
+    return cstrxx_floatfrset(buf, pos, num, -1, nsize, ' ');
 }
 
-inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, int ffixed, char c, int nsize)
+inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, int ffixed, int nsize, char c)
 {
     char fbuf[FBUF_SIZE];
     size_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, num, ffixed);
     size_t pad_size = nsize - fbuf_size;
-    return cstrxx_strset(buf, pos, fbuf, fbuf_size) + cstrxx_charspan(buf, pos + fbuf_size, c, pad_size);
+    return cstrxx_strlset(buf, pos, fbuf, fbuf_size, nsize, c);
 }
 
-inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, char c, int nsize)
+inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, int nsize, char c)
 {
-    return cstrxx_floatflset(buf, pos, num, -1, c, nsize);
+    return cstrxx_floatflset(buf, pos, num, -1, nsize, c);
 }
 
 inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, int ffixed, int nsize)
 {
-    return cstrxx_floatflset(buf, pos, num, ffixed, ' ', nsize);
+    return cstrxx_floatflset(buf, pos, num, ffixed, nsize, ' ');
 }
 
 inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, int nsize)
 {
-    return cstrxx_floatflset(buf, pos, num, -1, ' ', nsize);
+    return cstrxx_floatflset(buf, pos, num, -1, nsize, ' ');
 }
 
 inline size_t cstrxx_sfloatfset(char* buf, size_t pos, double num, int ffixed = -1)
 {
     char fbuf[FBUF_SIZE];
     size_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, (num < 0 ? num * -1 : num), ffixed);
-    pos += _cstrxx_floatsign(buf, pos, num);
-    return cstrxx_strset(buf, pos, fbuf, fbuf_size) + 1;
+    return _cstrxx_floatsign(buf, pos, num) + cstrxx_strset(buf, pos + 1, fbuf, fbuf_size);
 }
 
 // DATETIME INSERTIONS
