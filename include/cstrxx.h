@@ -156,7 +156,7 @@ inline size_t cstrxx_intlset(char* buf, size_t pos, int64_t num, size_t nsize)
 
 // FLOAT INSERTIONS
 
-static inline size_t _cstrxx_floatf(char* buf, size_t buf_size, double num, size_t ffixed)
+static inline size_t _cstrxx_floatf(char* buf, size_t buf_size, double num, int64_t ffixed)
 {
     std::to_chars_result tcr;
     if (ffixed < 0)
@@ -170,7 +170,7 @@ static inline size_t _cstrxx_floatf(char* buf, size_t buf_size, double num, size
     return tcr.ptr - buf;
 }
 
-inline size_t cstrxx_floatfset(char* buf, size_t pos, double num, size_t ffixed)
+inline size_t cstrxx_floatfset(char* buf, size_t pos, double num, int64_t ffixed)
 {
     char fbuf[FBUF_SIZE];
     size_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, num, ffixed);
@@ -182,7 +182,7 @@ inline size_t cstrxx_floatfset(char* buf, size_t pos, double num)
     return cstrxx_floatfset(buf, pos, num, -1);
 }
 
-inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, size_t ffixed, size_t nsize, char c)
+inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, int64_t ffixed, size_t nsize, char c)
 {
     char fbuf[FBUF_SIZE];
     size_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, num, ffixed);
@@ -195,7 +195,7 @@ inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, size_t nsize,
     return cstrxx_floatfrset(buf, pos, num, -1, nsize, c);
 }
 
-inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, size_t ffixed, size_t nsize)
+inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, int64_t ffixed, size_t nsize)
 {
     return cstrxx_floatfrset(buf, pos, num, ffixed, nsize, ' ');
 }
@@ -205,7 +205,7 @@ inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, size_t nsize)
     return cstrxx_floatfrset(buf, pos, num, -1, nsize, ' ');
 }
 
-inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, size_t ffixed, size_t nsize, char c)
+inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, int64_t ffixed, size_t nsize, char c)
 {
     char fbuf[FBUF_SIZE];
     size_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, num, ffixed);
@@ -218,7 +218,7 @@ inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, size_t nsize,
     return cstrxx_floatflset(buf, pos, num, -1, nsize, c);
 }
 
-inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, size_t ffixed, size_t nsize)
+inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, int64_t ffixed, size_t nsize)
 {
     return cstrxx_floatflset(buf, pos, num, ffixed, nsize, ' ');
 }
@@ -228,11 +228,16 @@ inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, size_t nsize)
     return cstrxx_floatflset(buf, pos, num, -1, nsize, ' ');
 }
 
-inline size_t cstrxx_sfloatfset(char* buf, size_t pos, double num, size_t ffixed = -1)
+inline size_t cstrxx_sfloatfset(char* buf, size_t pos, double num, int64_t ffixed)
 {
     char fbuf[FBUF_SIZE];
     size_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, (num < 0 ? num * -1 : num), ffixed);
     return _cstrxx_floatsign(buf, pos, num) + cstrxx_strset(buf, pos + 1, fbuf, fbuf_size);
+}
+
+inline size_t cstrxx_sfloatfset(char* buf, size_t pos, double num)
+{
+    return cstrxx_sfloatfset(buf, pos, num, -1);
 }
 
 // DATETIME INSERTIONS
