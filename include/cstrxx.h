@@ -110,53 +110,53 @@ static inline size_t _cstrxx_floatsign(char* buf, size_t pos, double num)
     return cstrxx_charset(buf, pos, num >= 0.0 ? '+' : '-');
 }
 
-static inline size_t _cstrxx_intsign(char* buf, size_t pos, int num)
+static inline size_t _cstrxx_intsign(char* buf, size_t pos, int64_t num)
 {
     return cstrxx_charset(buf, pos, num >= 0 ? '+' : '-');
 }
 
 // INT INSERTIONS
 
-static inline size_t _cstrxx_int_to_char(char* buf, size_t buf_size, int num)
+static inline size_t _cstrxx_int_to_char(char* buf, size_t buf_size, int64_t num)
 {
     std::to_chars_result tcr = std::to_chars(buf, buf + buf_size, num);
     return tcr.ptr - buf;
 }
 
-inline size_t cstrxx_intset(char* buf, size_t pos, int num)
+inline size_t cstrxx_intset(char* buf, size_t pos, int64_t num)
 {
     char fbuf[FBUF_SIZE];
     size_t fbuf_size = _cstrxx_int_to_char(fbuf, FBUF_SIZE, num);
     return cstrxx_strset(buf, pos, fbuf, fbuf_size);
 }
 
-inline size_t cstrxx_intrset(char* buf, size_t pos, int num, size_t nsize, char c)
+inline size_t cstrxx_intrset(char* buf, size_t pos, int64_t num, size_t nsize, char c)
 {
     char fbuf[FBUF_SIZE];
     size_t fbuf_size = _cstrxx_int_to_char(fbuf, FBUF_SIZE, num);
     return cstrxx_charspan(buf, pos, c, nsize - fbuf_size) + cstrxx_strset(buf, pos + nsize - fbuf_size, fbuf, fbuf_size);
 }
 
-inline size_t cstrxx_intrset(char* buf, size_t pos, int num, size_t nsize)
+inline size_t cstrxx_intrset(char* buf, size_t pos, int64_t num, size_t nsize)
 {
     return cstrxx_intrset(buf, pos, num, nsize, ' ');
 }
 
-inline size_t cstrxx_intlset(char* buf, size_t pos, int num, size_t nsize, char c)
+inline size_t cstrxx_intlset(char* buf, size_t pos, int64_t num, size_t nsize, char c)
 {
     char fbuf[FBUF_SIZE];
     size_t fbuf_size = _cstrxx_int_to_char(fbuf, FBUF_SIZE, num);
     return cstrxx_strset(buf, pos, fbuf, fbuf_size) + cstrxx_charspan(buf, pos + fbuf_size, c, nsize - fbuf_size);
 }
 
-inline size_t cstrxx_intlset(char* buf, size_t pos, int num, size_t nsize)
+inline size_t cstrxx_intlset(char* buf, size_t pos, int64_t num, size_t nsize)
 {
     return cstrxx_intlset(buf, pos, num, nsize, ' ');
 }
 
 // FLOAT INSERTIONS
 
-static inline size_t _cstrxx_floatf(char* buf, size_t buf_size, double num, int ffixed)
+static inline size_t _cstrxx_floatf(char* buf, size_t buf_size, double num, size_t ffixed)
 {
     std::to_chars_result tcr;
     if (ffixed < 0)
@@ -170,7 +170,7 @@ static inline size_t _cstrxx_floatf(char* buf, size_t buf_size, double num, int 
     return tcr.ptr - buf;
 }
 
-inline size_t cstrxx_floatfset(char* buf, size_t pos, double num, int ffixed)
+inline size_t cstrxx_floatfset(char* buf, size_t pos, double num, size_t ffixed)
 {
     char fbuf[FBUF_SIZE];
     size_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, num, ffixed);
@@ -182,7 +182,7 @@ inline size_t cstrxx_floatfset(char* buf, size_t pos, double num)
     return cstrxx_floatfset(buf, pos, num, -1);
 }
 
-inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, int ffixed, int nsize, char c)
+inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, size_t ffixed, size_t nsize, char c)
 {
     char fbuf[FBUF_SIZE];
     size_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, num, ffixed);
@@ -190,22 +190,22 @@ inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, int ffixed, i
     return cstrxx_strrset(buf, pos, fbuf, fbuf_size, nsize, c);
 }
 
-inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, int nsize, char c)
+inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, size_t nsize, char c)
 {
     return cstrxx_floatfrset(buf, pos, num, -1, nsize, c);
 }
 
-inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, int ffixed, int nsize)
+inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, size_t ffixed, size_t nsize)
 {
     return cstrxx_floatfrset(buf, pos, num, ffixed, nsize, ' ');
 }
 
-inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, int nsize)
+inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, size_t nsize)
 {
     return cstrxx_floatfrset(buf, pos, num, -1, nsize, ' ');
 }
 
-inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, int ffixed, int nsize, char c)
+inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, size_t ffixed, size_t nsize, char c)
 {
     char fbuf[FBUF_SIZE];
     size_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, num, ffixed);
@@ -213,22 +213,22 @@ inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, int ffixed, i
     return cstrxx_strlset(buf, pos, fbuf, fbuf_size, nsize, c);
 }
 
-inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, int nsize, char c)
+inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, size_t nsize, char c)
 {
     return cstrxx_floatflset(buf, pos, num, -1, nsize, c);
 }
 
-inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, int ffixed, int nsize)
+inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, size_t ffixed, size_t nsize)
 {
     return cstrxx_floatflset(buf, pos, num, ffixed, nsize, ' ');
 }
 
-inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, int nsize)
+inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, size_t nsize)
 {
     return cstrxx_floatflset(buf, pos, num, -1, nsize, ' ');
 }
 
-inline size_t cstrxx_sfloatfset(char* buf, size_t pos, double num, int ffixed = -1)
+inline size_t cstrxx_sfloatfset(char* buf, size_t pos, double num, size_t ffixed = -1)
 {
     char fbuf[FBUF_SIZE];
     size_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, (num < 0 ? num * -1 : num), ffixed);
@@ -274,9 +274,9 @@ inline double cstrxx_floatget(const char* str)
     return cstrxx_floatget(str, strlen(str));
 }
 
-inline int cstrxx_intget(const char* str, size_t str_size)
+inline int64_t cstrxx_intget(const char* str, size_t str_size)
 {
-    int ivalue;
+    int64_t ivalue;
     std::from_chars_result fcr = std::from_chars(str, str + str_size, ivalue);
     if (fcr.ec == std::errc{})
     {
@@ -285,7 +285,7 @@ inline int cstrxx_intget(const char* str, size_t str_size)
     throw std::invalid_argument("could not convert str to int");
 }
 
-inline int cstrxx_intget(const char* str)
+inline int64_t cstrxx_intget(const char* str)
 {
     return cstrxx_intget(str, strlen(str));
 }
