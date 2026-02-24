@@ -261,6 +261,36 @@ inline size_t cstrxx_dtset(char* buf, size_t pos, time_t epoch)
     return dt_size;
 }
 
+inline size_t cstrxx_dsset(char* buf, size_t pos, time_t second, int tz_offset)
+{
+    time_t tz_second = second + tz_offset * 3600;
+    if (tz_second > 86399)
+    {
+        tz_second -= 86400;
+    }
+    else if (tz_second < 0)
+    {
+        tz_second += 86400;
+    }
+
+    time_t clock_hour = tz_second / 3600;
+    time_t clock_minute = tz_second % 3600 / 60;
+    time_t clock_second = tz_second % 3600 % 60;
+
+    size_t dts_size = 0;
+    dts_size += cstrxx_intrset(buf, pos, clock_hour, 2, '0');
+    dts_size += cstrxx_charset(buf, pos + dts_size, ':');
+    dts_size += cstrxx_intrset(buf, pos + dts_size, clock_minute, 2, '0');
+    dts_size += cstrxx_charset(buf, pos + dts_size, ':');
+    dts_size += cstrxx_intrset(buf, pos + dts_size, clock_second, 2, '0');
+    return dts_size;
+}
+
+inline size_t cstrxx_dsset(char* buf, size_t pos, time_t second)
+{
+    return cstrxx_dsset(buf, pos, second, 0);
+}
+
 // FROM STRING CONVERTIONS
 
 inline double cstrxx_floatget(const char* str, size_t str_size)
