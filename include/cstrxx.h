@@ -117,7 +117,7 @@ static inline size_t _cstrxx_intsign(char* buf, size_t pos, int64_t num)
 
 // INT INSERTIONS
 
-static inline size_t _cstrxx_int_to_char(char* buf, size_t buf_size, int64_t num)
+static inline ptrdiff_t _cstrxx_int_to_char(char* buf, size_t buf_size, int64_t num)
 {
     std::to_chars_result tcr = std::to_chars(buf, buf + buf_size, num);
     return tcr.ptr - buf;
@@ -126,15 +126,15 @@ static inline size_t _cstrxx_int_to_char(char* buf, size_t buf_size, int64_t num
 inline size_t cstrxx_intset(char* buf, size_t pos, int64_t num)
 {
     char fbuf[FBUF_SIZE];
-    size_t fbuf_size = _cstrxx_int_to_char(fbuf, FBUF_SIZE, num);
+    ptrdiff_t fbuf_size = _cstrxx_int_to_char(fbuf, FBUF_SIZE, num);
     return cstrxx_strset(buf, pos, fbuf, fbuf_size);
 }
 
 inline size_t cstrxx_intrset(char* buf, size_t pos, int64_t num, size_t nsize, char c)
 {
     char fbuf[FBUF_SIZE];
-    size_t fbuf_size = _cstrxx_int_to_char(fbuf, FBUF_SIZE, num);
-    return cstrxx_charspan(buf, pos, c, nsize - fbuf_size) + cstrxx_strset(buf, pos + nsize - fbuf_size, fbuf, fbuf_size);
+    ptrdiff_t fbuf_size = _cstrxx_int_to_char(fbuf, FBUF_SIZE, num);
+    return cstrxx_strrset(buf, pos, fbuf, fbuf_size, nsize, c);
 }
 
 inline size_t cstrxx_intrset(char* buf, size_t pos, int64_t num, size_t nsize)
@@ -145,8 +145,8 @@ inline size_t cstrxx_intrset(char* buf, size_t pos, int64_t num, size_t nsize)
 inline size_t cstrxx_intlset(char* buf, size_t pos, int64_t num, size_t nsize, char c)
 {
     char fbuf[FBUF_SIZE];
-    size_t fbuf_size = _cstrxx_int_to_char(fbuf, FBUF_SIZE, num);
-    return cstrxx_strset(buf, pos, fbuf, fbuf_size) + cstrxx_charspan(buf, pos + fbuf_size, c, nsize - fbuf_size);
+    ptrdiff_t fbuf_size = _cstrxx_int_to_char(fbuf, FBUF_SIZE, num);
+    return cstrxx_strlset(buf, pos, fbuf, fbuf_size, nsize, c);
 }
 
 inline size_t cstrxx_intlset(char* buf, size_t pos, int64_t num, size_t nsize)
@@ -156,7 +156,7 @@ inline size_t cstrxx_intlset(char* buf, size_t pos, int64_t num, size_t nsize)
 
 // FLOAT INSERTIONS
 
-static inline size_t _cstrxx_floatf(char* buf, size_t buf_size, double num, int64_t ffixed)
+static inline ptrdiff_t _cstrxx_floatf(char* buf, size_t buf_size, double num, int64_t ffixed)
 {
     std::to_chars_result tcr;
     if (ffixed < 0)
@@ -173,7 +173,7 @@ static inline size_t _cstrxx_floatf(char* buf, size_t buf_size, double num, int6
 inline size_t cstrxx_floatfset(char* buf, size_t pos, double num, int64_t ffixed)
 {
     char fbuf[FBUF_SIZE];
-    size_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, num, ffixed);
+    ptrdiff_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, num, ffixed);
     return cstrxx_strset(buf, pos, fbuf, fbuf_size);
 }
 
@@ -185,7 +185,7 @@ inline size_t cstrxx_floatfset(char* buf, size_t pos, double num)
 inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, int64_t ffixed, size_t nsize, char c)
 {
     char fbuf[FBUF_SIZE];
-    size_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, num, ffixed);
+    ptrdiff_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, num, ffixed);
     size_t pad_size = nsize - fbuf_size;
     return cstrxx_strrset(buf, pos, fbuf, fbuf_size, nsize, c);
 }
@@ -208,7 +208,7 @@ inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, size_t nsize)
 inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, int64_t ffixed, size_t nsize, char c)
 {
     char fbuf[FBUF_SIZE];
-    size_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, num, ffixed);
+    ptrdiff_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, num, ffixed);
     size_t pad_size = nsize - fbuf_size;
     return cstrxx_strlset(buf, pos, fbuf, fbuf_size, nsize, c);
 }
@@ -231,7 +231,7 @@ inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, size_t nsize)
 inline size_t cstrxx_sfloatfset(char* buf, size_t pos, double num, int64_t ffixed)
 {
     char fbuf[FBUF_SIZE];
-    size_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, (num < 0 ? num * -1 : num), ffixed);
+    ptrdiff_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, (num < 0 ? num * -1 : num), ffixed);
     return _cstrxx_floatsign(buf, pos, num) + cstrxx_strset(buf, pos + 1, fbuf, fbuf_size);
 }
 
