@@ -103,6 +103,24 @@ inline size_t cstrxx_strlset(char* buf, size_t pos, const char* str, size_t nsiz
     return cstrxx_strlset(buf, pos, str, strlen(str), nsize, ' ');
 }
 
+inline size_t cstrxx_strcset(char* buf, size_t pos, const char* str, size_t str_size, size_t nsize, char c)
+{
+    if (str_size < 1)
+    {
+        return cstrxx_charspan(buf, pos, c, nsize);
+    }
+    size_t sidepad = (nsize - str_size) / 2;
+    cstrxx_charspan(buf, pos, c, sidepad);
+    cstrxx_strset(buf, pos + sidepad, str, str_size);
+    cstrxx_charspan(buf, pos + sidepad + str_size, c, sidepad + (nsize - str_size) % 2);
+    return nsize;
+}
+
+inline size_t cstrxx_strcset(char* buf, size_t pos, const char* str, size_t str_size, size_t nsize)
+{
+    return cstrxx_strcset(buf, pos, str, str_size, nsize, ' ');
+}
+
 // NUMBER SIGN INSERTIONS
 
 static inline size_t _cstrxx_floatsign(char* buf, size_t pos, double num)
@@ -152,6 +170,18 @@ inline size_t cstrxx_intlset(char* buf, size_t pos, int64_t num, size_t nsize, c
 inline size_t cstrxx_intlset(char* buf, size_t pos, int64_t num, size_t nsize)
 {
     return cstrxx_intlset(buf, pos, num, nsize, ' ');
+}
+
+inline size_t cstrxx_intcset(char* buf, size_t pos, int64_t num, size_t nsize, char c)
+{
+    char fbuf[FBUF_SIZE];
+    ptrdiff_t fbuf_size = _cstrxx_int_to_char(fbuf, FBUF_SIZE, num);
+    return cstrxx_strcset(buf, pos, fbuf, fbuf_size, nsize, c);
+}
+
+inline size_t cstrxx_intcset(char* buf, size_t pos, int64_t num, size_t nsize)
+{
+    return cstrxx_intcset(buf, pos, num, nsize, ' ');
 }
 
 // FLOAT INSERTIONS
@@ -226,6 +256,28 @@ inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, int64_t ffixe
 inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, size_t nsize)
 {
     return cstrxx_floatflset(buf, pos, num, -1, nsize, ' ');
+}
+
+inline size_t cstrxx_floatfcset(char* buf, size_t pos, double num, int64_t ffixed, size_t nsize, char c)
+{
+    char fbuf[FBUF_SIZE];
+    ptrdiff_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, num, ffixed);
+    return cstrxx_strcset(buf, pos, fbuf, fbuf_size, nsize, c);
+}
+
+inline size_t cstrxx_floatfcset(char* buf, size_t pos, double num, int64_t ffixed, size_t nsize)
+{
+    return cstrxx_floatfcset(buf, pos, num, ffixed, nsize, ' ');
+}
+
+inline size_t cstrxx_floatfcset(char* buf, size_t pos, double num, size_t nsize, char c)
+{
+    return cstrxx_floatfcset(buf, pos, num, -1, nsize, c);
+}
+
+inline size_t cstrxx_floatfcset(char* buf, size_t pos, double num, size_t nsize)
+{
+    return cstrxx_floatfcset(buf, pos, num, -1, nsize, ' ');
 }
 
 inline size_t cstrxx_sfloatfset(char* buf, size_t pos, double num, int64_t ffixed)
