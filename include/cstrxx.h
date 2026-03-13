@@ -28,6 +28,13 @@ inline size_t cstrxx_tcharset(char* buf, size_t pos, char c1, char c2, char c3)
 
 inline size_t cstrxx_charspan(char* buf, size_t pos, char c, size_t count)
 {
+    switch(count)
+    {
+        case 0: return 0;
+        case 1: return cstrxx_charset(buf, pos, c);
+        case 2: return cstrxx_dcharset(buf, pos, c, c);
+        case 3: return cstrxx_tcharset(buf, pos, c, c, c);
+    }
     memset(buf + pos, c, count);
     return count;
 }
@@ -80,8 +87,7 @@ inline size_t cstrxx_strlset(char* buf, size_t pos, const char* str, size_t str_
 {
     if (str_size < 1)
     {
-        cstrxx_charspan(buf, pos, c, nsize);
-        return nsize;
+        return cstrxx_charspan(buf, pos, c, nsize);
     }
     cstrxx_strset(buf, pos, str, str_size);
     cstrxx_charspan(buf, pos + str_size, c, nsize - str_size);
