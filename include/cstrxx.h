@@ -6,41 +6,101 @@
 #include <stdexcept>
 #include <charconv>
 
-constexpr const size_t FBUF_SIZE = 64;
+constexpr size_t    LOCALBUF_SIZE       = 64;
 
-// CHAR INSERTIONS
+constexpr char      DEFAULT_PADC        = ' ';
+constexpr int64_t   DEFAULT_FFIXED      = -1;
+constexpr int32_t   DEFAULT_TZ_OFFSET   = 0;
 
-inline size_t cstrxx_charset(char* buf, size_t pos, char c)
+
+///////// CHARACTERS OPERATIONS \\\\\\\\\
+
+
+/**
+ * Insert 1 char into C-string buffer
+ *
+ * @param buf   C-string buffer
+ * @param pos   Char position in `buf` buffer from where insert `c` character
+ * @param c     Character to insert
+ *
+ * @return      Number of written characters
+**/
+inline size_t cstrxx_charset_1(char* buf, size_t pos, char c)
 {
     buf[pos] = c;
     return 1;
 }
 
-inline size_t cstrxx_dcharset(char* buf, size_t pos, char c1, char c2)
+/**
+ * Insert consequtively 2 chars into C-string buffer
+ *
+ * @param buf   C-string buffer
+ * @param pos   Char position in `buf` buffer from where insert `c1` and `c2` characters
+ * @param c1    First character to insert
+ * @param c22   Second character to insert
+ *
+ * @return      Number of written characters
+**/
+inline size_t cstrxx_charset_2(char* buf, size_t pos, char c1, char c2)
 {
-    return cstrxx_charset(buf, pos, c1) + cstrxx_charset(buf, pos + 1, c2);
+    return cstrxx_charset_1(buf, pos, c1) + cstrxx_charset_1(buf, pos + 1, c2);
 }
 
-inline size_t cstrxx_tcharset(char* buf, size_t pos, char c1, char c2, char c3)
+/**
+ * Insert consequtively 3 chars into C-string buffer
+ *
+ * @param buf   C-string buffer
+ * @param pos   Char position in `buf` buffer from where insert `c1`, `c2, and `c3` characters
+ * @param c1    First character to insert
+ * @param c2    Second character to insert
+ * @param c3    Third character to insert
+ *
+ * @return      Number of written characters
+**/
+inline size_t cstrxx_charset_3(char* buf, size_t pos, char c1, char c2, char c3)
 {
-    return cstrxx_charset(buf, pos, c1) + cstrxx_charset(buf, pos + 1, c2) + cstrxx_charset(buf, pos + 2, c3);
+    return cstrxx_charset_1(buf, pos, c1) + cstrxx_charset_1(buf, pos + 1, c2) + cstrxx_charset_1(buf, pos + 2, c3);
 }
 
+/**
+ * Insert span of characters into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where insert the span
+ * @param c         Span character
+ * @param count     Number of `c` characters to span
+ *
+ * @return          Number of written characters
+ *
+ * @note        If span is less then 4 characters, it performs basic char insertion
+**/
 inline size_t cstrxx_charspan(char* buf, size_t pos, char c, size_t count)
 {
     switch(count)
     {
         case 0: return 0;
-        case 1: return cstrxx_charset(buf, pos, c);
-        case 2: return cstrxx_dcharset(buf, pos, c, c);
-        case 3: return cstrxx_tcharset(buf, pos, c, c, c);
+        case 1: return cstrxx_charset_1(buf, pos, c);
+        case 2: return cstrxx_charset_2(buf, pos, c, c);
+        case 3: return cstrxx_charset_3(buf, pos, c, c, c);
     }
     memset(buf + pos, c, count);
     return count;
 }
 
-// STRING INSERTIONS
 
+///////// BASIC STRING OPERATIONS \\\\\\\\\
+
+
+/**
+ * Insert other C-string into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert the other C-string
+ * @param str       Other C-string
+ * @param str_size  Other C-string size
+ *
+ * @return          Number of written characters
+**/
 inline size_t cstrxx_strset(char* buf, size_t pos, const char* str, size_t str_size)
 {
     if (str_size < 1)
@@ -51,147 +111,449 @@ inline size_t cstrxx_strset(char* buf, size_t pos, const char* str, size_t str_s
     return str_size;
 }
 
+/**
+ * Insert other C-string into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert the other C-string
+ * @param str       Other C-string
+ *
+ * @return          Number of written characters
+ *
+ * @note    Finds out `str` size on it's own.
+ *              To mitigate strlen() overhead use overload with str_size parameter.
+**/
 inline size_t cstrxx_strset(char* buf, size_t pos, const char* str)
 {
     return cstrxx_strset(buf, pos, str, strlen(str));
 }
 
-inline size_t cstrxx_strrset(char* buf, size_t pos, const char* str, size_t str_size, size_t nsize, char c)
+
+///////// PADDED STRING OPERATIONS \\\\\\\\\
+
+
+/**
+ * Insert other C-string aligned to the right with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert the other C-string
+ * @param str       Other C-string
+ * @param str_size  Other C-string size
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+**/
+inline size_t cstrxx_strset_r(char* buf, size_t pos, const char* str, size_t str_size, size_t pad_size, char padc)
 {
     if (str_size < 1)
     {
-        cstrxx_charspan(buf, pos, c, nsize);
-        return nsize;
+        return cstrxx_charspan(buf, pos, padc, pad_size);
     }
-    cstrxx_charspan(buf, pos, c, nsize - str_size);
-    cstrxx_strset(buf, pos + nsize - str_size, str, str_size);
-    return nsize;
+    const size_t pad_left_size = pad_size - str_size;
+    cstrxx_charspan(buf, pos, padc, pad_left_size);
+    cstrxx_strset(buf, pos + pad_left_size, str, str_size);
+    return pad_size;
 }
 
-inline size_t cstrxx_strrset(char* buf, size_t pos, const char* str, size_t nsize, char c)
+/**
+ * Insert other C-string aligned to the right with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert the other C-string
+ * @param str       Other C-string
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+ *
+ * @note    Finds out `str` size on it's own.
+ *              To mitigate strlen() overhead use overload with str_size parameter.
+**/
+inline size_t cstrxx_strset_r(char* buf, size_t pos, const char* str, size_t pad_size, char padc)
 {
-    return cstrxx_strrset(buf, pos, str, strlen(str), nsize, c);
+    return cstrxx_strset_r(buf, pos, str, strlen(str), pad_size, padc);
 }
 
-inline size_t cstrxx_strrset(char* buf, size_t pos, const char* str, size_t str_size, size_t nsize)
+/**
+ * Insert other C-string aligned to the right with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert the other C-string
+ * @param str       Other C-string
+ * @param str_size  Other C-string size
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ *
+ * @return          Number of written characters
+ *
+ * @note    Uses default ' ' space as padded character.
+**/
+inline size_t cstrxx_strset_r(char* buf, size_t pos, const char* str, size_t str_size, size_t pad_size)
 {
-    return cstrxx_strrset(buf, pos, str, str_size, nsize, ' ');
+    return cstrxx_strset_r(buf, pos, str, str_size, pad_size, DEFAULT_PADC);
 }
 
-inline size_t cstrxx_strrset(char* buf, size_t pos, const char* str, size_t nsize)
+/**
+ * Insert other C-string aligned to the right with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert the other C-string
+ * @param str       Other C-string
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ *
+ * @return          Number of written characters
+ *
+ * @note    Finds out `str` size on it's own.
+ *              To mitigate strlen() overhead use overload with str_size parameter.
+ *
+ *          Uses default ' ' space as padded character.
+**/
+inline size_t cstrxx_strset_r(char* buf, size_t pos, const char* str, size_t pad_size)
 {
-    return cstrxx_strrset(buf, pos, str, strlen(str), nsize, ' ');
+    return cstrxx_strset_r(buf, pos, str, strlen(str), pad_size, DEFAULT_PADC);
 }
 
-inline size_t cstrxx_strlset(char* buf, size_t pos, const char* str, size_t str_size, size_t nsize, char c)
+/**
+ * Insert other C-string aligned to the left with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert the other C-string
+ * @param str       Other C-string
+ * @param str_size  Other C-string size
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+**/
+inline size_t cstrxx_strset_l(char* buf, size_t pos, const char* str, size_t str_size, size_t pad_size, char padc)
 {
     if (str_size < 1)
     {
-        return cstrxx_charspan(buf, pos, c, nsize);
+        return cstrxx_charspan(buf, pos, padc, pad_size);
     }
+    const size_t pad_left_size = pad_size - str_size;
     cstrxx_strset(buf, pos, str, str_size);
-    cstrxx_charspan(buf, pos + str_size, c, nsize - str_size);
-    return nsize;
+    cstrxx_charspan(buf, pos + str_size, padc, pad_left_size);
+    return pad_size;
 }
 
-inline size_t cstrxx_strlset(char* buf, size_t pos, const char* str, size_t nsize, char c)
+/**
+ * Insert other C-string aligned to the left with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert the other C-string
+ * @param str       Other C-string
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+ *
+ * @note    Finds out `str` size on it's own.
+ *              To mitigate strlen() overhead use overload with str_size parameter.
+**/
+inline size_t cstrxx_strset_l(char* buf, size_t pos, const char* str, size_t pad_size, char padc)
 {
-    return cstrxx_strlset(buf, pos, str, strlen(str), nsize, c);
+    return cstrxx_strset_l(buf, pos, str, strlen(str), pad_size, padc);
 }
 
-inline size_t cstrxx_strlset(char* buf, size_t pos, const char* str, size_t str_size, size_t nsize)
+/**
+ * Insert other C-string aligned to the left with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert the other C-string
+ * @param str       Other C-string
+ * @param str_size  Other C-string size
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ *
+ * @return          Number of written characters
+ *
+ * @note    Uses default ' ' space as padded character.
+**/
+inline size_t cstrxx_strset_l(char* buf, size_t pos, const char* str, size_t str_size, size_t pad_size)
 {
-    return cstrxx_strlset(buf, pos, str, str_size, nsize, ' ');
+    return cstrxx_strset_l(buf, pos, str, str_size, pad_size, DEFAULT_PADC);
 }
 
-inline size_t cstrxx_strlset(char* buf, size_t pos, const char* str, size_t nsize)
+/**
+ * Insert other C-string aligned to the left with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert the other C-string
+ * @param str       Other C-string
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ *
+ * @return          Number of written characters
+ *
+ * @note    Finds out `str` size on it's own.
+ *              To mitigate strlen() overhead use overload with str_size parameter.
+ *
+ *          Uses default ' ' space as padded character.
+**/
+inline size_t cstrxx_strset_l(char* buf, size_t pos, const char* str, size_t pad_size)
 {
-    return cstrxx_strlset(buf, pos, str, strlen(str), nsize, ' ');
+    return cstrxx_strset_l(buf, pos, str, strlen(str), pad_size, DEFAULT_PADC); 
 }
 
-inline size_t cstrxx_strcset(char* buf, size_t pos, const char* str, size_t str_size, size_t nsize, char c)
+/**
+ * Insert other C-string aligned to the center with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert the other C-string
+ * @param str       Other C-string
+ * @param str_size  Other C-string size
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+**/
+inline size_t cstrxx_strset_c(char* buf, size_t pos, const char* str, size_t str_size, size_t pad_size, char padc)
 {
     if (str_size < 1)
     {
-        return cstrxx_charspan(buf, pos, c, nsize);
+        return cstrxx_charspan(buf, pos, padc, pad_size);
     }
-    size_t sidepad = (nsize - str_size) / 2;
-    cstrxx_charspan(buf, pos, c, sidepad);
-    cstrxx_strset(buf, pos + sidepad, str, str_size);
-    cstrxx_charspan(buf, pos + sidepad + str_size, c, sidepad + (nsize - str_size) % 2);
-    return nsize;
+    const size_t pad_left_size = pad_size - str_size;
+    const size_t pad_side_size = (pad_left_size) / 2;
+    cstrxx_charspan(buf, pos, padc, pad_side_size);
+    cstrxx_strset(buf, pos + pad_side_size, str, str_size);
+    cstrxx_charspan(buf, pos + pad_side_size + str_size, padc, pad_side_size + pad_left_size % 2);
+    return pad_size;
 }
 
-inline size_t cstrxx_strcset(char* buf, size_t pos, const char* str, size_t str_size, size_t nsize)
+/**
+ * Insert other C-string aligned to the center with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert the other C-string
+ * @param str       Other C-string
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+ *
+ * @note    Finds out `str` size on it's own.
+ *              To mitigate strlen() overhead use overload with str_size parameter.
+**/
+inline size_t cstrxx_strset_c(char* buf, size_t pos, const char* str, size_t pad_size, char padc)
 {
-    return cstrxx_strcset(buf, pos, str, str_size, nsize, ' ');
+    return cstrxx_strset_c(buf, pos, str, strlen(str), pad_size, padc);
 }
 
-// NUMBER SIGN INSERTIONS
-
-static inline size_t _cstrxx_floatsign(char* buf, size_t pos, double num)
+/**
+ * Insert other C-string aligned to the center with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert the other C-string
+ * @param str       Other C-string
+ * @param str_size  Other C-string size
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ *
+ * @return          Number of written characters
+ *
+ * @note    Uses default ' ' space as padded character.
+**/
+inline size_t cstrxx_strset_c(char* buf, size_t pos, const char* str, size_t str_size, size_t pad_size)
 {
-    return cstrxx_charset(buf, pos, num >= 0.0 ? '+' : '-');
+    return cstrxx_strset_c(buf, pos, str, str_size, pad_size, DEFAULT_PADC);
 }
 
-static inline size_t _cstrxx_intsign(char* buf, size_t pos, int64_t num)
+/**
+ * Insert other C-string aligned to the center with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert the other C-string
+ * @param str       Other C-string
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ *
+ * @return          Number of written characters
+ *
+ * @note    Finds out `str` size on it's own.
+ *              To mitigate strlen() overhead use overload with str_size parameter.
+ *
+ *          Uses default ' ' space as padded character.
+**/
+inline size_t cstrxx_strset_c(char* buf, size_t pos, const char* str, size_t pad_size)
 {
-    return cstrxx_charset(buf, pos, num >= 0 ? '+' : '-');
+    return cstrxx_strset_c(buf, pos, str, strlen(str), pad_size, DEFAULT_PADC);
 }
 
-// INT INSERTIONS
 
+///////// INTEGER NUMBERS OPERATIONS \\\\\\\\\
+
+
+/// Private helper function
+///
+/// Converts integer into char representation using <charconv>
+/// and finds it's size
+///
+///     buf         C-string buffer
+///     buf_size    C-string buffer size
+///     num         Integer number
+///
+///     Returns     Size of integer `num` in char representation
+///
 static inline ptrdiff_t _cstrxx_int_to_char(char* buf, size_t buf_size, int64_t num)
 {
-    std::to_chars_result tcr = std::to_chars(buf, buf + buf_size, num);
+    const std::to_chars_result tcr = std::to_chars(buf, buf + buf_size, num);
     return tcr.ptr - buf;
 }
 
+/// Private helper function
+///
+/// Inserts explicit sign to the `buf` depending on `num` value
+///
+///     buf         C-string buffer
+///     buf_size    C-string buffer size
+///     num         Integer number
+///
+///     Returns     Number of written characters
+///
+static inline size_t _cstrxx_intsign(char* buf, size_t pos, int64_t num)
+{
+    return cstrxx_charset_1(buf, pos, num >= 0 ? '+' : '-');
+}
+
+/**
+ * Insert integer value into C-string buffer
+ *
+ * @param buf   C-string buffer
+ * @param pos   Char position in `buf` buffer from where to insert integer number
+ * @param num   Integer number
+ *
+ * @return      Number of written characters
+**/
 inline size_t cstrxx_intset(char* buf, size_t pos, int64_t num)
 {
-    char fbuf[FBUF_SIZE];
-    ptrdiff_t fbuf_size = _cstrxx_int_to_char(fbuf, FBUF_SIZE, num);
-    return cstrxx_strset(buf, pos, fbuf, fbuf_size);
+    char localbuf[LOCALBUF_SIZE];
+    ptrdiff_t localbuf_size = _cstrxx_int_to_char(localbuf, LOCALBUF_SIZE, num);
+    return cstrxx_strset(buf, pos, localbuf, localbuf_size);
 }
 
-inline size_t cstrxx_intrset(char* buf, size_t pos, int64_t num, size_t nsize, char c)
+/**
+ * Insert integer value aligned to the right with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert integer number
+ * @param num       Integer number
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+**/
+inline size_t cstrxx_intset_r(char* buf, size_t pos, int64_t num, size_t pad_size, char padc)
 {
-    char fbuf[FBUF_SIZE];
-    ptrdiff_t fbuf_size = _cstrxx_int_to_char(fbuf, FBUF_SIZE, num);
-    return cstrxx_strrset(buf, pos, fbuf, fbuf_size, nsize, c);
+    char localbuf[LOCALBUF_SIZE];
+    ptrdiff_t localbuf_size = _cstrxx_int_to_char(localbuf, LOCALBUF_SIZE, num);
+    return cstrxx_strset_r(buf, pos, localbuf, localbuf_size, pad_size, padc);
 }
 
-inline size_t cstrxx_intrset(char* buf, size_t pos, int64_t num, size_t nsize)
+/**
+ * Insert integer value aligned to the right with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert integer number
+ * @param num       Integer number
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+ *
+ * @note    Uses default ' ' space as padded character.
+**/
+inline size_t cstrxx_intset_r(char* buf, size_t pos, int64_t num, size_t pad_size)
 {
-    return cstrxx_intrset(buf, pos, num, nsize, ' ');
+    return cstrxx_intset_r(buf, pos, num, pad_size, DEFAULT_PADC);
 }
 
-inline size_t cstrxx_intlset(char* buf, size_t pos, int64_t num, size_t nsize, char c)
+/**
+ * Insert integer value aligned to the left with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert integer number
+ * @param num       Integer number
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+**/
+inline size_t cstrxx_intset_l(char* buf, size_t pos, int64_t num, size_t pad_size, char padc)
 {
-    char fbuf[FBUF_SIZE];
-    ptrdiff_t fbuf_size = _cstrxx_int_to_char(fbuf, FBUF_SIZE, num);
-    return cstrxx_strlset(buf, pos, fbuf, fbuf_size, nsize, c);
+    char localbuf[LOCALBUF_SIZE];
+    ptrdiff_t localbuf_size = _cstrxx_int_to_char(localbuf, LOCALBUF_SIZE, num);
+    return cstrxx_strset_l(buf, pos, localbuf, localbuf_size, pad_size, padc);
 }
 
-inline size_t cstrxx_intlset(char* buf, size_t pos, int64_t num, size_t nsize)
+/**
+ * Insert integer value aligned to the left with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert integer number
+ * @param num       Integer number
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+ *
+ * @note    Uses default ' ' space as padded character.
+**/
+inline size_t cstrxx_intset_l(char* buf, size_t pos, int64_t num, size_t pad_size)
 {
-    return cstrxx_intlset(buf, pos, num, nsize, ' ');
+    return cstrxx_intset_l(buf, pos, num, pad_size, DEFAULT_PADC);
 }
 
-inline size_t cstrxx_intcset(char* buf, size_t pos, int64_t num, size_t nsize, char c)
+/**
+ * Insert integer value aligned to the center with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert integer number
+ * @param num       Integer number
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+**/
+inline size_t cstrxx_intset_c(char* buf, size_t pos, int64_t num, size_t pad_size, char padc)
 {
-    char fbuf[FBUF_SIZE];
-    ptrdiff_t fbuf_size = _cstrxx_int_to_char(fbuf, FBUF_SIZE, num);
-    return cstrxx_strcset(buf, pos, fbuf, fbuf_size, nsize, c);
+    char localbuf[LOCALBUF_SIZE];
+    ptrdiff_t localbuf_size = _cstrxx_int_to_char(localbuf, LOCALBUF_SIZE, num);
+    return cstrxx_strset_c(buf, pos, localbuf, localbuf_size, pad_size, padc);
 }
 
-inline size_t cstrxx_intcset(char* buf, size_t pos, int64_t num, size_t nsize)
+/**
+ * Insert integer value aligned to the center with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert integer number
+ * @param num       Integer number
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+ *
+ * @note    Uses default ' ' space as padded character.
+**/
+inline size_t cstrxx_intset_c(char* buf, size_t pos, int64_t num, size_t pad_size)
 {
-    return cstrxx_intcset(buf, pos, num, nsize, ' ');
+    return cstrxx_intset_c(buf, pos, num, pad_size, DEFAULT_PADC);
 }
 
-// FLOAT INSERTIONS
 
+///////// FLOATING POINT NUMBERS OPERATIONS \\\\\\\\\
+
+
+/// Private helper function
+///
+/// Converts double-precision float number into char representation using <charconv>
+/// and finds it's size.
+/// Additionally limits the fractional side
+///
+///     buf         C-string buffer
+///     buf_size    C-string buffer size
+///     num         Double-precision float number
+///     ffixed      Fraction fixed size
+///
+///     Returns     Size of double-precious float number `num` in char representation
+///
 static inline ptrdiff_t _cstrxx_floatf(char* buf, size_t buf_size, double num, int64_t ffixed)
 {
     std::to_chars_result tcr;
@@ -206,120 +568,350 @@ static inline ptrdiff_t _cstrxx_floatf(char* buf, size_t buf_size, double num, i
     return tcr.ptr - buf;
 }
 
-inline size_t cstrxx_floatfset(char* buf, size_t pos, double num, int64_t ffixed)
+/// Private helper function
+///
+/// Inserts explicit sign to the `buf` depending on `num` value
+///
+///     buf         C-string buffer
+///     buf_size    C-string buffer size
+///     num         Double-precision float number
+///
+///     Returns     Number of written characters
+///
+static inline size_t _cstrxx_floatsign(char* buf, size_t pos, double num)
 {
-    char fbuf[FBUF_SIZE];
-    ptrdiff_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, num, ffixed);
-    return cstrxx_strset(buf, pos, fbuf, fbuf_size);
+    return cstrxx_charset_1(buf, pos, num >= 0.0 ? '+' : '-');
 }
 
-inline size_t cstrxx_floatfset(char* buf, size_t pos, double num)
+/**
+ * Insert double float number into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Double float number
+ * @param ffixed    Fractional fixed size
+ *
+ * @return          Number of written characters
+**/
+inline size_t cstrxx_doubleset(char* buf, size_t pos, double num, int64_t ffixed)
 {
-    return cstrxx_floatfset(buf, pos, num, -1);
+    char localbuf[LOCALBUF_SIZE];
+    ptrdiff_t localbuf_size = _cstrxx_floatf(localbuf, LOCALBUF_SIZE, num, ffixed);
+    return cstrxx_strset(buf, pos, localbuf, localbuf_size);
 }
 
-inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, int64_t ffixed, size_t nsize, char c)
+/**
+ * Insert double float number into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Double float number
+ *
+ * @return          Number of written characters
+ *
+ * @note    Defaults ffixed to -1 (general formatting with length 14)
+**/
+inline size_t cstrxx_doubleset(char* buf, size_t pos, double num)
 {
-    char fbuf[FBUF_SIZE];
-    ptrdiff_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, num, ffixed);
-    size_t pad_size = nsize - fbuf_size;
-    return cstrxx_strrset(buf, pos, fbuf, fbuf_size, nsize, c);
+    return cstrxx_doubleset(buf, pos, num, DEFAULT_FFIXED);
 }
 
-inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, size_t nsize, char c)
+/**
+ * Insert double float number into C-string buffer with explicit sign char
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Double float number
+ * @param ffixed    Fractional fixed size
+ *
+ * @return          Number of written characters
+**/
+inline size_t cstrxx_s_doubleset(char* buf, size_t pos, double num, int64_t ffixed)
 {
-    return cstrxx_floatfrset(buf, pos, num, -1, nsize, c);
+    char localbuf[LOCALBUF_SIZE];
+    ptrdiff_t localbuf_size = _cstrxx_floatf(localbuf, LOCALBUF_SIZE, (num < 0 ? num * -1 : num), ffixed);
+    return _cstrxx_floatsign(buf, pos, num) + cstrxx_strset(buf, pos + 1, localbuf, localbuf_size);
 }
 
-inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, int64_t ffixed, size_t nsize)
+/**
+ * Insert double float number into C-string buffer with explicit sign char
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Double float number
+ * @param ffixed    Fractional fixed size
+ *
+ * @return          Number of written characters
+ *
+ * @note    Defaults ffixed to -1 (general formatting with length 14)
+**/
+inline size_t cstrxx_s_doubleset(char* buf, size_t pos, double num)
 {
-    return cstrxx_floatfrset(buf, pos, num, ffixed, nsize, ' ');
+    return cstrxx_s_doubleset(buf, pos, num, DEFAULT_FFIXED);
 }
 
-inline size_t cstrxx_floatfrset(char* buf, size_t pos, double num, size_t nsize)
+/**
+ * Insert double float number aligned to the right with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Double float number
+ * @param ffixed    Fractional fixed size
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+**/
+inline size_t cstrxx_doubleset_r(char* buf, size_t pos, double num, int64_t ffixed, size_t pad_size, char padc)
 {
-    return cstrxx_floatfrset(buf, pos, num, -1, nsize, ' ');
+    char localbuf[LOCALBUF_SIZE];
+    ptrdiff_t localbuf_size = _cstrxx_floatf(localbuf, LOCALBUF_SIZE, num, ffixed);
+    return cstrxx_strset_r(buf, pos, localbuf, localbuf_size, pad_size, padc);
 }
 
-inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, int64_t ffixed, size_t nsize, char c)
+/**
+ * Insert double float number aligned to the right with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Double float number
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+ *
+ * @note    Defaults ffixed to -1 (general formatting with length 14)
+**/
+inline size_t cstrxx_doubleset_r(char* buf, size_t pos, double num, size_t pad_size, char padc)
 {
-    char fbuf[FBUF_SIZE];
-    ptrdiff_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, num, ffixed);
-    size_t pad_size = nsize - fbuf_size;
-    return cstrxx_strlset(buf, pos, fbuf, fbuf_size, nsize, c);
+    return cstrxx_doubleset_r(buf, pos, num, DEFAULT_FFIXED, pad_size, padc);
 }
 
-inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, size_t nsize, char c)
+/**
+ * Insert double float number aligned to the right with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Integer number
+ * @param ffixed    Fractional fixed size
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ *
+ * @return          Number of written characters
+ *
+ * @note    Uses default ' ' space as padded character.
+**/
+inline size_t cstrxx_doubleset_r(char* buf, size_t pos, double num, int64_t ffixed, size_t pad_size)
 {
-    return cstrxx_floatflset(buf, pos, num, -1, nsize, c);
+    return cstrxx_doubleset_r(buf, pos, num, ffixed, pad_size, DEFAULT_PADC);
 }
 
-inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, int64_t ffixed, size_t nsize)
+/**
+ * Insert double float number aligned to the right with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Integer number
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ *
+ * @return          Number of written characters
+ *
+ * @note    Uses default ' ' space as padded character.
+ *          Defaults ffixed to -1 (general formatting with length 14)
+**/
+inline size_t cstrxx_doubleset_r(char* buf, size_t pos, double num, size_t pad_size)
 {
-    return cstrxx_floatflset(buf, pos, num, ffixed, nsize, ' ');
+    return cstrxx_doubleset_r(buf, pos, num, DEFAULT_FFIXED, pad_size, DEFAULT_PADC);
 }
 
-inline size_t cstrxx_floatflset(char* buf, size_t pos, double num, size_t nsize)
+/**
+ * Insert double float number aligned to the left with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Double float number
+ * @param ffixed    Fractional fixed size
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+**/
+inline size_t cstrxx_doubleset_l(char* buf, size_t pos, double num, int64_t ffixed, size_t pad_size, char padc)
 {
-    return cstrxx_floatflset(buf, pos, num, -1, nsize, ' ');
+    char localbuf[LOCALBUF_SIZE];
+    ptrdiff_t localbuf_size = _cstrxx_floatf(localbuf, LOCALBUF_SIZE, num, ffixed);
+    return cstrxx_strset_l(buf, pos, localbuf, localbuf_size, pad_size, padc);
 }
 
-inline size_t cstrxx_floatfcset(char* buf, size_t pos, double num, int64_t ffixed, size_t nsize, char c)
+/**
+ * Insert double float number aligned to the left with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Double float number
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+ *
+ * @note    Defaults ffixed to -1 (general formatting with length 14)
+**/
+inline size_t cstrxx_doubleset_l(char* buf, size_t pos, double num, size_t pad_size, char c)
 {
-    char fbuf[FBUF_SIZE];
-    ptrdiff_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, num, ffixed);
-    return cstrxx_strcset(buf, pos, fbuf, fbuf_size, nsize, c);
+    return cstrxx_doubleset_l(buf, pos, num, DEFAULT_FFIXED, pad_size, c);
 }
 
-inline size_t cstrxx_floatfcset(char* buf, size_t pos, double num, int64_t ffixed, size_t nsize)
+/**
+ * Insert double float number aligned to the left with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Integer number
+ * @param ffixed    Fractional fixed size
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ *
+ * @return          Number of written characters
+ *
+ * @note    Uses default ' ' space as padded character.
+**/
+inline size_t cstrxx_doubleset_l(char* buf, size_t pos, double num, int64_t ffixed, size_t pad_size)
 {
-    return cstrxx_floatfcset(buf, pos, num, ffixed, nsize, ' ');
+    return cstrxx_doubleset_l(buf, pos, num, ffixed, pad_size, DEFAULT_PADC);
 }
 
-inline size_t cstrxx_floatfcset(char* buf, size_t pos, double num, size_t nsize, char c)
+/**
+ * Insert double float number aligned to the left with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Integer number
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ *
+ * @return          Number of written characters
+ *
+ * @note    Uses default ' ' space as padded character.
+ *          Defaults ffixed to -1 (general formatting with length 14)
+**/
+inline size_t cstrxx_doubleset_l(char* buf, size_t pos, double num, size_t pad_size)
 {
-    return cstrxx_floatfcset(buf, pos, num, -1, nsize, c);
+    return cstrxx_doubleset_l(buf, pos, num, DEFAULT_FFIXED, pad_size, DEFAULT_PADC);
 }
 
-inline size_t cstrxx_floatfcset(char* buf, size_t pos, double num, size_t nsize)
+/**
+ * Insert double float number aligned to the center with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Double float number
+ * @param ffixed    Fractional fixed size
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+**/
+inline size_t cstrxx_doubleset_c(char* buf, size_t pos, double num, int64_t ffixed, size_t pad_size, char padc)
 {
-    return cstrxx_floatfcset(buf, pos, num, -1, nsize, ' ');
+    char localbuf[LOCALBUF_SIZE];
+    ptrdiff_t localbuf_size = _cstrxx_floatf(localbuf, LOCALBUF_SIZE, num, ffixed);
+    return cstrxx_strset_c(buf, pos, localbuf, localbuf_size, pad_size, padc);
 }
 
-inline size_t cstrxx_sfloatfset(char* buf, size_t pos, double num, int64_t ffixed)
+/**
+ * Insert double float number aligned to the center with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Double float number
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+ *
+ * @note    Defaults ffixed to -1 (general formatting with length 14)
+**/
+inline size_t cstrxx_doubleset_c(char* buf, size_t pos, double num, size_t pad_size, char padc)
 {
-    char fbuf[FBUF_SIZE];
-    ptrdiff_t fbuf_size = _cstrxx_floatf(fbuf, FBUF_SIZE, (num < 0 ? num * -1 : num), ffixed);
-    return _cstrxx_floatsign(buf, pos, num) + cstrxx_strset(buf, pos + 1, fbuf, fbuf_size);
+    return cstrxx_doubleset_c(buf, pos, num, DEFAULT_FFIXED, pad_size, padc);
 }
 
-inline size_t cstrxx_sfloatfset(char* buf, size_t pos, double num)
+/**
+ * Insert double float number aligned to the center with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Integer number
+ * @param ffixed    Fractional fixed size
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ *
+ * @return          Number of written characters
+ *
+ * @note    Uses default ' ' space as padded character.
+**/
+inline size_t cstrxx_doubleset_c(char* buf, size_t pos, double num, int64_t ffixed, size_t pad_size)
 {
-    return cstrxx_sfloatfset(buf, pos, num, -1);
+    return cstrxx_doubleset_c(buf, pos, num, ffixed, pad_size, DEFAULT_PADC);
 }
 
-// DATETIME INSERTIONS
+/**
+ * Insert double float number aligned to the center with padding into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Integer number
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ *
+ * @return          Number of written characters
+ *
+ * @note    Uses default ' ' space as padded character.
+ *          Defaults ffixed to -1 (general formatting with length 14)
+**/
+inline size_t cstrxx_doubleset_c(char* buf, size_t pos, double num, size_t pad_size)
+{
+    return cstrxx_doubleset_c(buf, pos, num, DEFAULT_FFIXED, pad_size, DEFAULT_PADC);
+}
 
+
+///////// DATE AND TIME OPERATIONS \\\\\\\\\
+
+
+/**
+ * Insert datetime epoch in YYYY-MM-DD hh:mm::ss format into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert datetime epoch
+ * @param epoch     Datetime epoch time
+ *
+ * @return          Number of written characters
+**/
 inline size_t cstrxx_dtset(char* buf, size_t pos, time_t epoch)
 {
     struct tm ts;
     localtime_r(&epoch, &ts);
     size_t dt_size = 0;
-    dt_size += cstrxx_intrset(buf, pos, 1900 + ts.tm_year, 4, '0');
-    dt_size += cstrxx_charset(buf, pos + dt_size, '-');
-    dt_size += cstrxx_intrset(buf, pos + dt_size, ts.tm_mon + 1, 2, '0');
-    dt_size += cstrxx_charset(buf, pos + dt_size, '-');
-    dt_size += cstrxx_intrset(buf, pos + dt_size, ts.tm_mday, 2, '0');
-    dt_size += cstrxx_charset(buf, pos + dt_size, ' ');
-    dt_size += cstrxx_intrset(buf, pos + dt_size, ts.tm_hour, 2, '0');
-    dt_size += cstrxx_charset(buf, pos + dt_size, ':');
-    dt_size += cstrxx_intrset(buf, pos + dt_size, ts.tm_min, 2, '0');
-    dt_size += cstrxx_charset(buf, pos + dt_size, ':');
-    dt_size += cstrxx_intrset(buf, pos + dt_size, ts.tm_sec, 2, '0');
+    dt_size += cstrxx_intset_r(buf, pos, 1900 + ts.tm_year, 4, '0');
+    dt_size += cstrxx_charset_1(buf, pos + dt_size, '-');
+    dt_size += cstrxx_intset_r(buf, pos + dt_size, ts.tm_mon + 1, 2, '0');
+    dt_size += cstrxx_charset_1(buf, pos + dt_size, '-');
+    dt_size += cstrxx_intset_r(buf, pos + dt_size, ts.tm_mday, 2, '0');
+    dt_size += cstrxx_charset_1(buf, pos + dt_size, ' ');
+    dt_size += cstrxx_intset_r(buf, pos + dt_size, ts.tm_hour, 2, '0');
+    dt_size += cstrxx_charset_1(buf, pos + dt_size, ':');
+    dt_size += cstrxx_intset_r(buf, pos + dt_size, ts.tm_min, 2, '0');
+    dt_size += cstrxx_charset_1(buf, pos + dt_size, ':');
+    dt_size += cstrxx_intset_r(buf, pos + dt_size, ts.tm_sec, 2, '0');
     return dt_size;
 }
 
-inline size_t cstrxx_dsset(char* buf, size_t pos, time_t second, int tz_offset)
+/**
+ * Insert second of a day in hh:mm:ss format into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert second of a day
+ * @param second    Second of a day
+ * @param tz_offset Timezone offset
+ *
+ * @return          Number of written characters
+**/
+inline size_t cstrxx_sodset(char* buf, size_t pos, time_t second, int32_t tz_offset)
 {
     time_t tz_second = second + tz_offset * 3600;
     if (tz_second > 86399)
@@ -336,21 +928,42 @@ inline size_t cstrxx_dsset(char* buf, size_t pos, time_t second, int tz_offset)
     time_t clock_second = tz_second % 3600 % 60;
 
     size_t dts_size = 0;
-    dts_size += cstrxx_intrset(buf, pos, clock_hour, 2, '0');
-    dts_size += cstrxx_charset(buf, pos + dts_size, ':');
-    dts_size += cstrxx_intrset(buf, pos + dts_size, clock_minute, 2, '0');
-    dts_size += cstrxx_charset(buf, pos + dts_size, ':');
-    dts_size += cstrxx_intrset(buf, pos + dts_size, clock_second, 2, '0');
+    dts_size += cstrxx_intset_r(buf, pos, clock_hour, 2, '0');
+    dts_size += cstrxx_charset_1(buf, pos + dts_size, ':');
+    dts_size += cstrxx_intset_r(buf, pos + dts_size, clock_minute, 2, '0');
+    dts_size += cstrxx_charset_1(buf, pos + dts_size, ':');
+    dts_size += cstrxx_intset_r(buf, pos + dts_size, clock_second, 2, '0');
     return dts_size;
 }
 
-inline size_t cstrxx_dsset(char* buf, size_t pos, time_t second)
+/**
+ * Insert second of a day in hh:mm:ss format into C-string buffer
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert second of a day
+ * @param second    Second of a day
+ *
+ * @return          Number of written characters
+ *
+ * @note    Defaults tz_offset to UTC+0
+**/
+inline size_t cstrxx_sodset(char* buf, size_t pos, time_t second)
 {
-    return cstrxx_dsset(buf, pos, second, 0);
+    return cstrxx_sodset(buf, pos, second, DEFAULT_TZ_OFFSET);
 }
 
-// FROM STRING CONVERTIONS
 
+///////// FROM C-STRING OPERATIONS \\\\\\\\\
+
+
+/**
+ * Convert C-string to double float number
+ *
+ * @param str       C-string
+ * @param str_size  C-string size
+ *
+ * @return          Double float number, otherwise for incorrect number throws error
+**/
 inline double cstrxx_floatget(const char* str, size_t str_size)
 {
     double fvalue;
@@ -362,11 +975,28 @@ inline double cstrxx_floatget(const char* str, size_t str_size)
     throw std::invalid_argument("could not convert str to float");
 }
 
+/**
+ * Convert C-string to double float number
+ *
+ * @param str       C-string
+ *
+ * @return          Double float number, otherwise for incorrect number throws error
+ *
+ * @note    To mitigate strlen() overhead use overload with str_size parameter.
+**/
 inline double cstrxx_floatget(const char* str)
 {
     return cstrxx_floatget(str, strlen(str));
 }
 
+/**
+ * Convert C-string to 64 bit integer
+ *
+ * @param str       C-string
+ * @param str_size  C-string size
+ *
+ * @return          64 bit integer, otherwise for incorrect number throws error
+**/
 inline int64_t cstrxx_intget(const char* str, size_t str_size)
 {
     int64_t ivalue;
@@ -378,6 +1008,15 @@ inline int64_t cstrxx_intget(const char* str, size_t str_size)
     throw std::invalid_argument("could not convert str to int");
 }
 
+/**
+ * Convert C-string to 64 bit integer
+ *
+ * @param str       C-string
+ *
+ * @return          64 bit integer, otherwise for incorrect number throws error
+ *
+ * @note    To mitigate strlen() overhead use overload with str_size parameter.
+**/
 inline int64_t cstrxx_intget(const char* str)
 {
     return cstrxx_intget(str, strlen(str));
