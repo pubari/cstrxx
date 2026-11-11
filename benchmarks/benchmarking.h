@@ -31,7 +31,7 @@ void run_benchmark(F benchmark, const char* f_name)
     ).count();
 
     const auto elapsed_ns = time_end - time_start;
-    printf("%s result: \"%s\"\nElapsed time: %11lld ns\n\n", f_name, benchmark_str, elapsed_ns);
+    printf("%s\nResult:\"%s\"\nElapsed time: %11lld ns\n\n", f_name, benchmark_str, elapsed_ns);
 }
 
 #define BENCHMARK(f) run_benchmark(f, #f)
