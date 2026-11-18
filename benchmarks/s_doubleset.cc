@@ -13,7 +13,7 @@ inline constexpr double N5 = +0.34;
 void cstdio_benchmark(char* buf, size_t buf_size)
 {
     /// NOTE: printf has no centered variation
-    snprintf(buf, buf_size, "%+.3f|%+.3f|%+8.3f|%-+8.3f| %-+7.3f", N1, N2, N3, N4, N5);
+    snprintf(buf, buf_size, "%+.3f|%+.3f|%+8.3f|%-+8.3f|%+8.3f", N1, N2, N3, N4, N5);
 }
 
 void format_benchmark(char* buf, size_t buf_size)

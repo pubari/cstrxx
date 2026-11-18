@@ -392,7 +392,7 @@ inline size_t cstrxx_strset_c(char* buf, size_t pos, const char* str, size_t pad
 ///
 ///     Returns     Size of integer `num` in char representation
 ///
-static inline ptrdiff_t _cstrxx_int_to_char(char* buf, size_t buf_size, int64_t num)
+static inline ptrdiff_t _cstrxx_itos(char* buf, size_t buf_size, int64_t num)
 {
     const std::to_chars_result tcr = std::to_chars(buf, buf + buf_size, num);
     return tcr.ptr - buf;
@@ -425,8 +425,135 @@ static inline size_t _cstrxx_intsign(char* buf, size_t pos, int64_t num)
 inline size_t cstrxx_intset(char* buf, size_t pos, int64_t num)
 {
     char localbuf[LOCALBUF_SIZE];
-    ptrdiff_t localbuf_size = _cstrxx_int_to_char(localbuf, LOCALBUF_SIZE, num);
+    ptrdiff_t localbuf_size = _cstrxx_itos(localbuf, LOCALBUF_SIZE, num);
     return cstrxx_strset(buf, pos, localbuf, localbuf_size);
+}
+
+/**
+ * Insert integer number into C-string buffer with explicit sign char
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Integer number
+ *
+ * @return          Number of written characters
+**/
+inline size_t cstrxx_s_intset(char* buf, size_t pos, int64_t num)
+{
+    char localbuf[LOCALBUF_SIZE];
+    ptrdiff_t localbuf_size = _cstrxx_itos(localbuf, LOCALBUF_SIZE, (num < 0 ? num * -1 : num));
+    return _cstrxx_intsign(buf, pos, num) + cstrxx_strset(buf, pos + 1, localbuf, localbuf_size);
+}
+
+/**
+ * Insert integer number aligned to the right with padding into C-string buffer
+ *   with explicit sign char
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Integer number
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+**/
+inline size_t cstrxx_s_intset_r(char* buf, size_t pos, int64_t num, size_t pad_size, char padc)
+{
+    char localbuf[LOCALBUF_SIZE];
+    const size_t localbuf_size = cstrxx_s_intset(localbuf, 0, num);
+    return cstrxx_strset_r(buf, pos, localbuf, localbuf_size, pad_size, padc);
+}
+
+/**
+ * Insert integer number aligned to the right with padding into C-string buffer
+ *   with explicit sign char
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Integer number
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ *
+ * @return          Number of written characters
+ *
+ * @note    Uses default ' ' space as padded character.
+**/
+inline size_t cstrxx_s_intset_r(char* buf, size_t pos, int64_t num, size_t pad_size)
+{
+    return cstrxx_s_intset_r(buf, pos, num, pad_size, DEFAULT_PADC);
+}
+
+/**
+ * Insert integer number aligned to the left with padding into C-string buffer
+ *   with explicit sign char
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Integer number
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+**/
+inline size_t cstrxx_s_intset_l(char* buf, size_t pos, int64_t num, size_t pad_size, char padc)
+{
+    char localbuf[LOCALBUF_SIZE];
+    const size_t localbuf_size = cstrxx_s_intset(localbuf, 0, num);
+    return cstrxx_strset_l(buf, pos, localbuf, localbuf_size, pad_size, padc);
+}
+
+/**
+ * Insert integer number aligned to the left with padding into C-string buffer
+ *   with explicit sign char
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Integer number
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ *
+ * @return          Number of written characters
+ *
+ * @note    Uses default ' ' space as padded character.
+**/
+inline size_t cstrxx_s_intset_l(char* buf, size_t pos, int64_t num, size_t pad_size)
+{
+    return cstrxx_s_intset_l(buf, pos, num, pad_size, DEFAULT_PADC);
+}
+
+/**
+ * Insert integer number aligned to the center with padding into C-string buffer
+ *   with explicit sign char
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Integer number
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ * @param padc      Padding character
+ *
+ * @return          Number of written characters
+**/
+inline size_t cstrxx_s_intset_c(char* buf, size_t pos, int64_t num, size_t pad_size, char padc)
+{
+    char localbuf[LOCALBUF_SIZE];
+    const size_t localbuf_size = cstrxx_s_intset(localbuf, 0, num);
+    return cstrxx_strset_c(buf, pos, localbuf, localbuf_size, pad_size, padc);
+}
+
+/**
+ * Insert integer number aligned to the center with padding into C-string buffer
+ *   with explicit sign char
+ *
+ * @param buf       C-string buffer
+ * @param pos       Char position in `buf` buffer from where to insert double float number
+ * @param num       Integer number
+ * @param pad_size  Padded size. C-string of this size will be inserted into buffer
+ *
+ * @return          Number of written characters
+ *
+ * @note    Uses default ' ' space as padded character.
+**/
+inline size_t cstrxx_s_intset_c(char* buf, size_t pos, int64_t num, size_t pad_size)
+{
+    return cstrxx_s_intset_c(buf, pos, num, pad_size, DEFAULT_PADC);
 }
 
 /**
@@ -436,14 +563,13 @@ inline size_t cstrxx_intset(char* buf, size_t pos, int64_t num)
  * @param pos       Char position in `buf` buffer from where to insert integer number
  * @param num       Integer number
  * @param pad_size  Padded size. C-string of this size will be inserted into buffer
- * @param padc      Padding character
  *
  * @return          Number of written characters
 **/
 inline size_t cstrxx_intset_r(char* buf, size_t pos, int64_t num, size_t pad_size, char padc)
 {
     char localbuf[LOCALBUF_SIZE];
-    ptrdiff_t localbuf_size = _cstrxx_int_to_char(localbuf, LOCALBUF_SIZE, num);
+    ptrdiff_t localbuf_size = _cstrxx_itos(localbuf, LOCALBUF_SIZE, num);
     return cstrxx_strset_r(buf, pos, localbuf, localbuf_size, pad_size, padc);
 }
 
@@ -479,7 +605,7 @@ inline size_t cstrxx_intset_r(char* buf, size_t pos, int64_t num, size_t pad_siz
 inline size_t cstrxx_intset_l(char* buf, size_t pos, int64_t num, size_t pad_size, char padc)
 {
     char localbuf[LOCALBUF_SIZE];
-    ptrdiff_t localbuf_size = _cstrxx_int_to_char(localbuf, LOCALBUF_SIZE, num);
+    ptrdiff_t localbuf_size = _cstrxx_itos(localbuf, LOCALBUF_SIZE, num);
     return cstrxx_strset_l(buf, pos, localbuf, localbuf_size, pad_size, padc);
 }
 
@@ -515,7 +641,7 @@ inline size_t cstrxx_intset_l(char* buf, size_t pos, int64_t num, size_t pad_siz
 inline size_t cstrxx_intset_c(char* buf, size_t pos, int64_t num, size_t pad_size, char padc)
 {
     char localbuf[LOCALBUF_SIZE];
-    ptrdiff_t localbuf_size = _cstrxx_int_to_char(localbuf, LOCALBUF_SIZE, num);
+    ptrdiff_t localbuf_size = _cstrxx_itos(localbuf, LOCALBUF_SIZE, num);
     return cstrxx_strset_c(buf, pos, localbuf, localbuf_size, pad_size, padc);
 }
 
@@ -554,7 +680,7 @@ inline size_t cstrxx_intset_c(char* buf, size_t pos, int64_t num, size_t pad_siz
 ///
 ///     Returns     Size of double-precious float number `num` in char representation
 ///
-static inline ptrdiff_t _cstrxx_floatf(char* buf, size_t buf_size, double num, int64_t ffixed)
+static inline ptrdiff_t _cstrxx_dtos(char* buf, size_t buf_size, double num, int64_t ffixed)
 {
     std::to_chars_result tcr;
     if (ffixed < 0)
@@ -596,7 +722,7 @@ static inline size_t _cstrxx_floatsign(char* buf, size_t pos, double num)
 inline size_t cstrxx_doubleset(char* buf, size_t pos, double num, int64_t ffixed)
 {
     char localbuf[LOCALBUF_SIZE];
-    ptrdiff_t localbuf_size = _cstrxx_floatf(localbuf, LOCALBUF_SIZE, num, ffixed);
+    ptrdiff_t localbuf_size = _cstrxx_dtos(localbuf, LOCALBUF_SIZE, num, ffixed);
     return cstrxx_strset(buf, pos, localbuf, localbuf_size);
 }
 
@@ -629,7 +755,7 @@ inline size_t cstrxx_doubleset(char* buf, size_t pos, double num)
 inline size_t cstrxx_s_doubleset(char* buf, size_t pos, double num, int64_t ffixed)
 {
     char localbuf[LOCALBUF_SIZE];
-    ptrdiff_t localbuf_size = _cstrxx_floatf(localbuf, LOCALBUF_SIZE, (num < 0 ? num * -1 : num), ffixed);
+    ptrdiff_t localbuf_size = _cstrxx_dtos(localbuf, LOCALBUF_SIZE, (num < 0 ? num * -1 : num), ffixed);
     return _cstrxx_floatsign(buf, pos, num) + cstrxx_strset(buf, pos + 1, localbuf, localbuf_size);
 }
 
@@ -895,7 +1021,7 @@ inline size_t cstrxx_s_doubleset_c(char* buf, size_t pos, double num, size_t pad
 inline size_t cstrxx_doubleset_r(char* buf, size_t pos, double num, int64_t ffixed, size_t pad_size, char padc)
 {
     char localbuf[LOCALBUF_SIZE];
-    ptrdiff_t localbuf_size = _cstrxx_floatf(localbuf, LOCALBUF_SIZE, num, ffixed);
+    ptrdiff_t localbuf_size = _cstrxx_dtos(localbuf, LOCALBUF_SIZE, num, ffixed);
     return cstrxx_strset_r(buf, pos, localbuf, localbuf_size, pad_size, padc);
 }
 
@@ -968,7 +1094,7 @@ inline size_t cstrxx_doubleset_r(char* buf, size_t pos, double num, size_t pad_s
 inline size_t cstrxx_doubleset_l(char* buf, size_t pos, double num, int64_t ffixed, size_t pad_size, char padc)
 {
     char localbuf[LOCALBUF_SIZE];
-    ptrdiff_t localbuf_size = _cstrxx_floatf(localbuf, LOCALBUF_SIZE, num, ffixed);
+    ptrdiff_t localbuf_size = _cstrxx_dtos(localbuf, LOCALBUF_SIZE, num, ffixed);
     return cstrxx_strset_l(buf, pos, localbuf, localbuf_size, pad_size, padc);
 }
 
@@ -1041,7 +1167,7 @@ inline size_t cstrxx_doubleset_l(char* buf, size_t pos, double num, size_t pad_s
 inline size_t cstrxx_doubleset_c(char* buf, size_t pos, double num, int64_t ffixed, size_t pad_size, char padc)
 {
     char localbuf[LOCALBUF_SIZE];
-    ptrdiff_t localbuf_size = _cstrxx_floatf(localbuf, LOCALBUF_SIZE, num, ffixed);
+    ptrdiff_t localbuf_size = _cstrxx_dtos(localbuf, LOCALBUF_SIZE, num, ffixed);
     return cstrxx_strset_c(buf, pos, localbuf, localbuf_size, pad_size, padc);
 }
 
